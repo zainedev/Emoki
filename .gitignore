@@ -1,0 +1,9 @@
+# .NET build / VS Code / Visual Studio ignores
+bin/
+obj/
+*.user
+*.suo
+*.vs
+*.nupkg
+*.cache
+*.DS_Store
