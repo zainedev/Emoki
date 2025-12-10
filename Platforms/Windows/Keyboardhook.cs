@@ -13,11 +13,14 @@ namespace Emoki.Platforms.Windows
 
         private const int VK_SHIFT = 0x10;
         private const int VK_OEM_1 = 0xBA; // ; key
-
+        private static bool colonActive = false;
         private static IntPtr _hookID = IntPtr.Zero;
         private static LowLevelKeyboardProc _proc = HookCallback;
 
         public static event Action? OnShiftColonPressed;
+
+        public static event Action? OnEmokiTriggered;
+
 
         public static void Start()
         {
@@ -55,9 +58,27 @@ namespace Emoki.Platforms.Windows
 
                 bool shiftPressed = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
 
+                // Detect ":"  (Shift + ;)
                 if (shiftPressed && vkCode == VK_OEM_1)
                 {
+                    colonActive = true;  // next char will be checked
                     OnShiftColonPressed?.Invoke();
+                    return CallNextHookEx(_hookID, nCode, wParam, lParam);
+                }
+
+                // If ":" was just typed, detect the NEXT character
+                if (colonActive)
+                {
+                    // ignore modifier keys
+                    if (vkCode >= 0x30 && vkCode <= 0x5A) // letters / numbers
+                    {
+                        OnEmokiTriggered?.Invoke();
+                        colonActive = false;
+                    }
+                    else if (vkCode == 0x20 || vkCode == 0x0D) // space or enter cancels
+                    {
+                        colonActive = false;
+                    }
                 }
             }
 

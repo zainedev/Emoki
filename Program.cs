@@ -14,6 +14,11 @@ namespace Emoki
                 Console.WriteLine("key pressed in the console");
             };
 
+            KeyboardHook.OnEmokiTriggered += () =>
+            {
+                Console.WriteLine("emoki triggered");
+            };
+            
             // Start the keyboard hook on a separate thread
             Thread hookThread = new Thread(() =>
             {
