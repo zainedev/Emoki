@@ -1,7 +1,11 @@
-{
-  "sob": "😭",
-  "joy": "😂",
-  "heart": "❤️",
-  "skull": "💀",
-  "smile": "😄"
-}
+[
+  {
+    "emoji": "😭",
+    "shortcuts": [":sob:", ":cry:", ":wah:", ":dead:"]
+  },
+  {
+    "emoji": "❤️",
+    "shortcuts": [":heart:", ":love:", ":redheart:"]
+  }
+]
+
