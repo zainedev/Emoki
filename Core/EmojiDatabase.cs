@@ -6,7 +6,6 @@ using System.Linq;
 
 namespace Emoki.Core
 {
-    // Class representing a single entry in the JSON
     public class EmojiEntry
     {
         public string? Emoji { get; set; }
@@ -15,10 +14,8 @@ namespace Emoki.Core
 
     public class EmojiDatabase
     {
-        // Private field to hold the flattened map: Shortcut (e.g., ":sob") -> Emoji (e.g., "😭")
-        private Dictionary<string, string> _emojisMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<string, string> _emojisMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); 
         
-        // Defines the expected path for the JSON file
         private const string EmojiDataFilePath = "Data/emojis.json";
 
         public EmojiDatabase()
@@ -41,22 +38,43 @@ namespace Emoki.Core
 
                 string jsonString = File.ReadAllText(fullPath);
 
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                };
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 
-                // 1. Deserialize the structured array
                 var structuredEntries = JsonSerializer.Deserialize<List<EmojiEntry>>(jsonString, options) ?? new List<EmojiEntry>();
                 
-                // 2. Flatten the structure into the desired Dictionary map,
-                //    PREPENDING THE COLON TO EACH SHORTCUT.
-                _emojisMap = structuredEntries
+                // 1. Create a flattened list of all {ShortcutKey, EmojiValue} pairs.
+                var allPairs = structuredEntries
                     .Where(e => e.Emoji != null && e.Shortcuts != null)
-                    .SelectMany(e => e.Shortcuts!.Select(s => new { Shortcut = ":" + s, Emoji = e.Emoji! })) // FIX APPLIED HERE: Prepending ":"
-                    .ToDictionary(x => x.Shortcut, x => x.Emoji, StringComparer.OrdinalIgnoreCase);
+                    .SelectMany(e => e.Shortcuts!
+                        .Select(s => 
+                        {
+                            // Standardize to :shortcut: format
+                            string cleanedShortcut = s.Trim().Trim(':').ToLowerInvariant();
+                            string key = $":{cleanedShortcut}:"; 
+                            
+                            return new { Shortcut = key, Emoji = e.Emoji! };
+                        }))
+                    .ToList();
+                
+                // 2. Handle duplicates by grouping keys and taking the first encountered Emoji.
+                // This ensures ToDictionary doesn't throw an exception on duplicate keys, 
+                // and should correct the count if a duplicate exists.
+                _emojisMap = allPairs
+                    .GroupBy(x => x.Shortcut, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key, 
+                        g => g.First().Emoji, // Takes the Emoji from the first element in the group
+                        StringComparer.OrdinalIgnoreCase
+                    ); 
+                
+                // Check if any keys were dropped due to duplication
+                if (allPairs.Count != _emojisMap.Count)
+                {
+                    int droppedCount = allPairs.Count - _emojisMap.Count;
+                    Console.WriteLine($"[Database] Warning: {droppedCount} duplicate shortcut keys were found and discarded.");
+                }
 
-                Console.WriteLine($"[Database] Loaded {_emojisMap.Count} total shortcuts (with prepended ':').");
+                Console.WriteLine($"[Database] Loaded {_emojisMap.Count} total shortcuts (standardized to :shortcut: format).");
             }
             catch (Exception ex)
             {

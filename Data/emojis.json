@@ -1,11 +1,16 @@
 [
   {
     "emoji": "😭",
-    "shortcuts": [":sob:", ":cry:", ":wah:", ":dead:"]
+    "shortcuts": ["sob", "cry", "wah", "dead"]
   },
   {
     "emoji": "❤️",
-    "shortcuts": [":heart:", ":love:", ":redheart:"]
+    "shortcuts": ["heart", "love", "redheart"]
+  },
+  {
+    "emoji": "😊",
+    "shortcuts": ["smile", "happy", "grin", "joy"]
   }
 ]
+
 
