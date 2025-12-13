@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="clr-namespace:Emoki.UI"
+        mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="150"
+        x:Class="Emoki.UI.PopupView"
+        Background="Transparent"
+        Title="Emoki Popup"
+        SystemDecorations="None"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        TransparencyLevelHint="Transparent"
+        WindowStartupLocation="Manual">
+    
+    <Design.DataContext>
+        <ui:PopupViewModel />
+    </Design.DataContext>
+
+    <Border BorderBrush="#303030" BorderThickness="1" CornerRadius="4" Background="White">
+        <StackPanel Margin="8" Orientation="Vertical">
+            <TextBlock Text="Matching Emojis:" FontWeight="Bold" Margin="0,0,0,5"/>
+            <ItemsControl ItemsSource="{Binding Results}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="ui:PopupResult">
+                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,2">
+                            <TextBlock Text="{Binding Emoji}" FontSize="16" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Shortcut}" Foreground="Gray" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </Border>
+</Window>

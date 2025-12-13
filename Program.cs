@@ -1,101 +1,101 @@
-﻿using System;
-using System.Threading;
-using Emoki.Platforms.Windows;
-using Emoki.Core;
+﻿using Avalonia;
+using System;
 using System.Collections.Generic;
-using System.Linq;
+using Emoki.Core;
+using Emoki.UI;
+using Avalonia.Threading; // Crucial for calling UI operations from a background thread
 using System.Text;
 
 namespace Emoki
 {
     class Program
     {
-        private static Dictionary<string, string> _emojiShortcutMap = new Dictionary<string, string>();
-        private const int MAX_CONSOLE_OUTPUT_LENGTH = 120; // Limit output length to prevent wrapping issues
+        public static Dictionary<string, string> EmojiShortcutMap { get; private set; } = new Dictionary<string, string>();
+        
+        // This must be initialized after the Dispatcher is running, but we'll instantiate it here.
+        private static PopupService _popupService = new PopupService(); 
 
-        static void Main(string[] args)
+        [STAThread]
+        public static void Main(string[] args)
         {
-            _emojiShortcutMap = new EmojiDatabase().GetAll();
+            // 1. Load the database before the UI starts
+            EmojiShortcutMap = new EmojiDatabase().GetAll();
+            Console.WriteLine($"Loaded {EmojiShortcutMap.Count} emoji shortcuts. Starting UI and Hook...");
 
-            Console.WriteLine($"Loaded {_emojiShortcutMap.Count} emoji shortcuts.");
+            // 2. Subscribe to the keyboard hook event.
+            Emoki.Platforms.Windows.KeyboardHook.OnBufferChanged += HandleBufferChanged;
 
-            KeyboardHook.OnBufferChanged += (buffer) =>
+            // 3. Start the keyboard hook on a separate background thread
+            System.Threading.Thread hookThread = new System.Threading.Thread(() =>
             {
-                // --- Start Clear Logic ---
-                // Save current cursor position, clear the line, and reset cursor
-                int currentLine = Console.CursorTop;
-                Console.SetCursorPosition(0, currentLine);
-                Console.Write(new string(' ', Console.WindowWidth - 1));
-                Console.SetCursorPosition(0, currentLine);
-                // --- End Clear Logic ---
-
-
-                string outputLine = $"Raw Buffer: [{buffer}]";
-
-                int colonIndex = buffer.LastIndexOf(':');
-                if (colonIndex != -1)
-                {
-                    string rawToken = buffer.Substring(colonIndex);
-
-                    StringBuilder clean = new StringBuilder();
-                    foreach (char c in rawToken)
-                    {
-                        // Ensure only valid shortcut characters are processed
-                        if (c == ':' || char.IsLetterOrDigit(c) || c == '_' || c == '-')
-                            clean.Append(char.ToLowerInvariant(c));
-                    }
-
-                    string token = clean.ToString();
-                    outputLine += $" | Clean Token: [{token}]";
-
-                    if (token.Length > 1)
-                    {
-                        var results = EmojiSearch.Search(_emojiShortcutMap, token);
-
-                        if (results.Count > 0)
-                        {
-                            var selected = results[0];
-                            outputLine += $" | SELECTED: {selected.Key} → {selected.Value}";
-                            
-                            // Build the MATCHES string
-                            string matchString = string.Join(
-                                " | ",
-                                results.Select(kvp => $"{kvp.Key}→{kvp.Value}")
-                            );
-                            
-                            outputLine += " | MATCHES: " + matchString;
-                        }
-                        else
-                        {
-                            outputLine += " | NO MATCHES";
-                        }
-                    }
-                }
-                
-                // Truncate the final output string to prevent wrapping and clutter
-                if (outputLine.Length > MAX_CONSOLE_OUTPUT_LENGTH)
-                {
-                    outputLine = outputLine.Substring(0, MAX_CONSOLE_OUTPUT_LENGTH - 3) + "...";
-                }
-
-                Console.Write(outputLine);
-            };
-
-            Thread hookThread = new Thread(() =>
-            {
-                KeyboardHook.Start();
+                Emoki.Platforms.Windows.KeyboardHook.Start();
             })
             {
                 IsBackground = true
             };
             hookThread.Start();
-
-            Console.WriteLine("Emoki running (global keyboard hook active)");
-            Console.WriteLine("Type ':' followed by letters anywhere.");
-            Console.WriteLine("Press Enter here to exit.\n");
-
-            Console.ReadLine();
-            KeyboardHook.Stop();
+            
+            // 4. Initialize and run the Avalonia application
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            
+            // Note: Control never reaches here until the app is closed.
         }
+
+        private static void HandleBufferChanged(string buffer)
+        {
+            // All UI operations MUST be run on the main UI thread (Dispatcher).
+            Dispatcher.UIThread.Invoke(() =>
+            {
+                try
+                {
+                    // Console output is removed here to prevent conflicts.
+                    
+                    List<KeyValuePair<string, string>> results = new List<KeyValuePair<string, string>>();
+                    bool searchTriggered = false;
+
+                    if (buffer.Contains(':'))
+                    {
+                        int lastColonIndex = buffer.LastIndexOf(':');
+                        string rawToken = buffer.Substring(lastColonIndex);
+
+                        // Sanitization and token extraction logic
+                        StringBuilder clean = new StringBuilder();
+                        foreach (char c in rawToken)
+                        {
+                            if (c == ':' || char.IsLetterOrDigit(c) || c == '_' || c == '-')
+                                clean.Append(char.ToLowerInvariant(c));
+                        }
+                        string token = clean.ToString();
+
+                        if (token.Length > 1)
+                        {
+                            results = EmojiSearch.Search(EmojiShortcutMap, token);
+                            searchTriggered = true;
+                        }
+                    }
+                    
+                    if (searchTriggered && results.Count > 0)
+                    {
+                        _popupService.ShowPopup(results);
+                    }
+                    else
+                    {
+                        _popupService.HidePopup();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Print any exception on the UI thread to the console for debugging
+                    Console.WriteLine($"[FATAL UI ERROR] {ex.Message}");
+                    _popupService.HidePopup();
+                }
+            });
+        }
+
+        public static AppBuilder BuildAvaloniaApp()
+            => AppBuilder.Configure<App>()
+                .UsePlatformDetect()
+                .WithInterFont()
+                .LogToTrace();
     }
 }
