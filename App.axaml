@@ -3,7 +3,21 @@
              xmlns:fluent="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent"
              x:Class="Emoki.App"
              x:CompileBindings="True"
-             
-             RequestedThemeVariant="Light"> <Application.Styles>
-        <fluent:FluentTheme /> </Application.Styles>
+             RequestedThemeVariant="Light">
+    
+    <TrayIcon.Icons>
+        <TrayIcons>
+            <TrayIcon Icon="avares://Emoki/Resources/Emoki-icon.ico"
+                      ToolTipText="Emoki Shortcut Finder">
+                <TrayIcon.Menu>
+                    <NativeMenu>
+                        <NativeMenuItem Header="Exit" Click="ExitAppMenuItem_Click" />
+                    </NativeMenu>
+                </TrayIcon.Menu>
+            </TrayIcon>
+        </TrayIcons>
+    </TrayIcon.Icons>
+    <Application.Styles>
+        <fluent:FluentTheme />
+    </Application.Styles>
 </Application>

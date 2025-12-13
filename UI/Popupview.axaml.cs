@@ -10,17 +10,11 @@ namespace Emoki.UI
         {
             InitializeComponent();
             
-            // --- Fixes Focus Stealing ---
-            this.ShowActivated = false;
+            // FIXES: Focus and Z-Order
+            this.ShowActivated = false; // Prevents the window from stealing focus
+            this.Topmost = true;        // Keeps the window above other applications
+            this.IsVisible = false;     // Ensure the initial state is hidden
             
-            // --- Fixes Z-Order (Always On Top) ---
-            this.Topmost = true; 
-            
-            // NOTE: Do not call this.Show() here. It belongs in the service class.
-            // When a window is created within a service/VM, it should be shown by the
-            // logic that manages it (PopupService), not in its own constructor.
-            // If the application is working now, keep the PopupService logic as is.
-
             DataContext = new PopupViewModel();
         }
     }

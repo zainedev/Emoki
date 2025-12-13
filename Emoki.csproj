@@ -25,6 +25,7 @@
         <AvaloniaXaml Update="UI\PopupView.axaml">
           <SubType>Designer</SubType>
         </AvaloniaXaml>
+        <AvaloniaResource Include="Resources/Emoki-icon.ico" />
     </ItemGroup>
 
 </Project>

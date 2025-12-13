@@ -3,8 +3,9 @@ using System;
 using System.Collections.Generic;
 using Emoki.Core;
 using Emoki.UI;
-using Avalonia.Threading; // Crucial for calling UI operations from a background thread
+using Avalonia.Threading;
 using System.Text;
+using System.Linq;
 
 namespace Emoki
 {
@@ -12,20 +13,37 @@ namespace Emoki
     {
         public static Dictionary<string, string> EmojiShortcutMap { get; private set; } = new Dictionary<string, string>();
         
-        // This must be initialized after the Dispatcher is running, but we'll instantiate it here.
+        // This must be instantiated here.
         private static PopupService _popupService = new PopupService(); 
 
         [STAThread]
         public static void Main(string[] args)
         {
-            // 1. Load the database before the UI starts
-            EmojiShortcutMap = new EmojiDatabase().GetAll();
-            Console.WriteLine($"Loaded {EmojiShortcutMap.Count} emoji shortcuts. Starting UI and Hook...");
+            // Global exception handlers to capture crashes during startup/runtime
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+            {
+                Console.WriteLine($"[UNHANDLED] {e.ExceptionObject}");
+            };
+            System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, e) =>
+            {
+                Console.WriteLine($"[UNOBSERVED TASK EX] {e.Exception}");
+            };
 
-            // 2. Subscribe to the keyboard hook event.
+            try
+            {
+                // 1. Load the database before the UI starts
+                EmojiShortcutMap = new EmojiDatabase().GetAll();
+                Console.WriteLine($"Loaded {EmojiShortcutMap.Count} emoji shortcuts. Starting UI and Hook...");
+            
+            // 2. Start the application life cycle first to get the Avalonia Dispatcher running.
+            var appBuilder = BuildAvaloniaApp();
+            
+            // 3. PopupService initialization is deferred until Avalonia platform is ready.
+
+            // 4. Subscribe to the keyboard hook event.
             Emoki.Platforms.Windows.KeyboardHook.OnBufferChanged += HandleBufferChanged;
 
-            // 3. Start the keyboard hook on a separate background thread
+            // 5. Start the keyboard hook on a separate background thread
             System.Threading.Thread hookThread = new System.Threading.Thread(() =>
             {
                 Emoki.Platforms.Windows.KeyboardHook.Start();
@@ -35,10 +53,20 @@ namespace Emoki
             };
             hookThread.Start();
             
-            // 4. Initialize and run the Avalonia application
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
-            
-            // Note: Control never reaches here until the app is closed.
+                // 6. Run the Avalonia application
+                appBuilder.StartWithClassicDesktopLifetime(args);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[FATAL STARTUP ERROR] {ex}");
+                Environment.Exit(1);
+            }
+        }
+
+        // Called by the Avalonia `App` once the framework is initialized on the UI thread.
+        public static void InitializePopupService()
+        {
+            _popupService.InitializeWindowHandle();
         }
 
         private static void HandleBufferChanged(string buffer)
@@ -48,8 +76,6 @@ namespace Emoki
             {
                 try
                 {
-                    // Console output is removed here to prevent conflicts.
-                    
                     List<KeyValuePair<string, string>> results = new List<KeyValuePair<string, string>>();
                     bool searchTriggered = false;
 
