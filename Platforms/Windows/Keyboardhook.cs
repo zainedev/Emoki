@@ -21,8 +21,6 @@ namespace Emoki.Platforms.Windows
         private const int VK_RETURN = 0x0D; // Enter
         private const int VK_TAB = 0x09; // Tab
         private const int VK_OEM_1 = 0xBA; // ; key (used for colon : when Shift is down)
-        // Removed: private const char COLON_CHAR = ':'; 
-        // Using literal ':' for consistency with search prefix requirement
 
         // --- Mouse Constants ---
         private const int WH_MOUSE_LL = 14;
@@ -43,6 +41,18 @@ namespace Emoki.Platforms.Windows
         private static LowLevelMouseProc _mouseProc = MouseHookCallback;
 
         public static event Action<string>? OnBufferChanged;
+
+        // --- NEW/MODIFIED FIELDS FOR INJECTION ---
+        public static Func<bool>? OnEnterPressed; // Returns true if the key should be suppressed.
+        public static int CurrentBufferLength { get; private set; } = 0;
+        
+        public static void ClearBuffer()
+        {
+            _characterBuffer = string.Empty;
+            CurrentBufferLength = 0;
+            OnBufferChanged?.Invoke(_characterBuffer);
+        }
+        // -----------------------------------------
 
         public static void Start()
         {
@@ -77,6 +87,7 @@ namespace Emoki.Platforms.Windows
             if (_characterBuffer != string.Empty)
             {
                 _characterBuffer = string.Empty;
+                CurrentBufferLength = 0;
                 OnBufferChanged?.Invoke(_characterBuffer);
             }
         }
@@ -90,6 +101,18 @@ namespace Emoki.Platforms.Windows
             {
                 int vkCode = Marshal.ReadInt32(lParam);
                 bool bufferChanged = false;
+                
+                // --- ENTER KEY SUPPRESSION ---
+                if (vkCode == VK_RETURN)
+                {
+                    // If OnEnterPressed handler exists and returns true, suppress the key.
+                    if (OnEnterPressed != null && OnEnterPressed.Invoke())
+                    {
+                        // Suppress the key press by returning 1
+                        return (IntPtr)1; 
+                    }
+                }
+                // -----------------------------
 
                 bool ctrlPressed = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
                 bool altPressed = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
@@ -186,6 +209,7 @@ namespace Emoki.Platforms.Windows
                         _characterBuffer = string.Empty; 
                     }
                     
+                    CurrentBufferLength = _characterBuffer.Length; // Update the exposed length
                     OnBufferChanged?.Invoke(_characterBuffer);
                 }
             }
