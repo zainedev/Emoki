@@ -1,4 +1,3 @@
-// UI/PopupView.axaml.cs
 using Avalonia.Controls;
 using System;
 
@@ -9,12 +8,25 @@ namespace Emoki.UI
         public PopupView()
         {
             InitializeComponent();
+            this.ShowActivated = false;
+            this.Topmost = true;
             
-            // FIXES: Focus and Z-Order
-            this.ShowActivated = false; // Prevents the window from stealing focus
-            this.Topmost = true;        // Keeps the window above other applications
-            this.IsVisible = false;     // Ensure the initial state is hidden
-            
+            var listBox = this.FindControl<ListBox>("EmojiList");
+            if (listBox != null)
+            {
+                listBox.SelectionChanged += (s, e) =>
+                {
+                    if (listBox.SelectedItem is PopupResult selected)
+                    {
+                        // Trigger the global selection event
+                        PopupService.OnEmojiSelected?.Invoke(selected);
+                        
+                        // Clear selection immediately so clicking the same one again works later
+                        listBox.SelectedItem = null;
+                    }
+                };
+            }
+
             DataContext = new PopupViewModel();
         }
     }

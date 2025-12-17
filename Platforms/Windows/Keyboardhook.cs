@@ -16,11 +16,10 @@ namespace Emoki.Platforms.Windows
 
         private const int VK_SHIFT = 0x10;
         private const int VK_CONTROL = 0x11;
-        private const int VK_MENU = 0x12; // Alt key
-        private const int VK_BACK = 0x08; // Backspace
-        private const int VK_RETURN = 0x0D; // Enter
-        private const int VK_TAB = 0x09; // Tab
-        private const int VK_OEM_1 = 0xBA; // ; key (used for colon : when Shift is down)
+        private const int VK_MENU = 0x12;
+        private const int VK_BACK = 0x08;
+        private const int VK_RETURN = 0x0D;
+        private const int VK_TAB = 0x09;
 
         // --- Mouse Constants ---
         private const int WH_MOUSE_LL = 14;
@@ -42,9 +41,12 @@ namespace Emoki.Platforms.Windows
 
         public static event Action<string>? OnBufferChanged;
 
-        // --- NEW/MODIFIED FIELDS FOR INJECTION ---
-        public static Func<bool>? OnEnterPressed; // Returns true if the key should be suppressed.
+        // --- NEW FIELDS FOR POPUP AWARENESS ---
+        public static Func<bool>? OnEnterPressed; 
         public static int CurrentBufferLength { get; private set; } = 0;
+        
+        // This will hold the HWND of the Avalonia Popup
+        public static IntPtr PopupHandle { get; set; } = IntPtr.Zero;
         
         public static void ClearBuffer()
         {
@@ -52,7 +54,6 @@ namespace Emoki.Platforms.Windows
             CurrentBufferLength = 0;
             OnBufferChanged?.Invoke(_characterBuffer);
         }
-        // -----------------------------------------
 
         public static void Start()
         {
@@ -77,11 +78,9 @@ namespace Emoki.Platforms.Windows
         {
             using Process curProcess = Process.GetCurrentProcess();
             using ProcessModule curModule = curProcess.MainModule!;
-            return SetWindowsHookEx(idHook, proc,
-                GetModuleHandle(curModule.ModuleName), 0);
+            return SetWindowsHookEx(idHook, proc, GetModuleHandle(curModule.ModuleName), 0);
         }
         
-        // Helper method to reset the buffer and notify
         private static void ResetBuffer()
         {
             if (_characterBuffer != string.Empty)
@@ -92,7 +91,6 @@ namespace Emoki.Platforms.Windows
             }
         }
 
-        // --- Keyboard Hook Implementation ---
         private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
 
         private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -102,24 +100,18 @@ namespace Emoki.Platforms.Windows
                 int vkCode = Marshal.ReadInt32(lParam);
                 bool bufferChanged = false;
                 
-                // --- ENTER KEY SUPPRESSION ---
                 if (vkCode == VK_RETURN)
                 {
-                    // If OnEnterPressed handler exists and returns true, suppress the key.
                     if (OnEnterPressed != null && OnEnterPressed.Invoke())
                     {
-                        // Suppress the key press by returning 1
                         return (IntPtr)1; 
                     }
                 }
-                // -----------------------------
 
                 bool ctrlPressed = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
                 bool altPressed = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
                 bool shiftPressed = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
                 
-                
-                // --- Handle Backspace ---
                 if (vkCode == VK_BACK)
                 {
                     if (_characterBuffer.Length > 0)
@@ -128,13 +120,10 @@ namespace Emoki.Platforms.Windows
                         bufferChanged = true;
                     }
                 }
-                // --- Handle Enter and Tab as Space (only if not a shortcut) ---
                 else if (vkCode == VK_RETURN || vkCode == VK_TAB)
                 {
                     if (!ctrlPressed && !altPressed)
                     {
-                        // Check if the current buffer already contains the colon, and if the
-                        // character right after the colon is a space. If so, don't add another space.
                         int colonIndex = _characterBuffer.LastIndexOf(':');
                         bool isSpaceAfterColon = colonIndex != -1 && colonIndex == _characterBuffer.Length - 1;
                         
@@ -145,24 +134,14 @@ namespace Emoki.Platforms.Windows
                         }
                     }
                 }
-                // --- Handle Printable Characters ---
-                else if (
-                    (vkCode >= 0x30 && vkCode <= 0x5A) ||
-                    (vkCode >= 0xBA && vkCode <= 0xC0) ||
-                    (vkCode >= 0xDB && vkCode <= 0xDF) ||
-                    (vkCode >= 0x60 && vkCode <= 0x6F) ||
-                    (vkCode == 0x20)
-                )
+                else if ((vkCode >= 0x30 && vkCode <= 0x5A) || (vkCode >= 0xBA && vkCode <= 0xC0) ||
+                         (vkCode >= 0xDB && vkCode <= 0xDF) || (vkCode >= 0x60 && vkCode <= 0x6F) || (vkCode == 0x20))
                 {
                     if (!ctrlPressed && !altPressed)
                     {
                         byte[] keyboardState = new byte[256];
-                        if (shiftPressed)
-                        {
-                            keyboardState[VK_SHIFT] = 0x80;
-                        }
+                        if (shiftPressed) keyboardState[VK_SHIFT] = 0x80;
 
-                        IntPtr hkl = GetKeyboardLayout(0);
                         byte[] charBuffer = new byte[2];
                         int result = ToAscii(vkCode, Marshal.ReadInt32(lParam), keyboardState, charBuffer, 0);
 
@@ -178,38 +157,25 @@ namespace Emoki.Platforms.Windows
                     }
                 }
 
-                // --- Manage Buffer and Event ---
                 if (bufferChanged)
                 {
-                    // 1. Determine the mode BEFORE truncation/reset
                     bool wasBufferUnlimited = _characterBuffer.Contains(':');
-
-                    if (wasBufferUnlimited)
+                    if (wasBufferUnlimited && _characterBuffer.Length > UNLIMITED_MODE_MAX_LENGTH)
                     {
-                        // 2. Check for the reset condition: length exceeding 16
-                        if (_characterBuffer.Length > UNLIMITED_MODE_MAX_LENGTH)
-                        {
-                            _characterBuffer = string.Empty;
-                        }
+                        _characterBuffer = string.Empty;
                     }
 
-                    // 3. Re-evaluate mode after potential reset
                     bool isBufferUnlimitedAfterChange = _characterBuffer.Contains(':');
-                    
-                    // 4. Truncate if we are in the LIMITED mode
                     if (!isBufferUnlimitedAfterChange && _characterBuffer.Length > BUFFER_MAX_LENGTH)
                     {
-                        // Truncate down to 5
                         _characterBuffer = _characterBuffer.Substring(_characterBuffer.Length - BUFFER_MAX_LENGTH);
                     }
                     else if (!isBufferUnlimitedAfterChange && wasBufferUnlimited)
                     {
-                        // Edge case: Colon was backed out, and the resulting string is shorter than 5. 
-                        // We must reset the buffer completely to avoid corrupted pre-colon context.
                         _characterBuffer = string.Empty; 
                     }
                     
-                    CurrentBufferLength = _characterBuffer.Length; // Update the exposed length
+                    CurrentBufferLength = _characterBuffer.Length;
                     OnBufferChanged?.Invoke(_characterBuffer);
                 }
             }
@@ -217,8 +183,6 @@ namespace Emoki.Platforms.Windows
             return CallNextHookEx(_keyboardHookID, nCode, wParam, lParam);
         }
 
-
-        // --- Mouse Hook Implementation ---
         private delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
 
         private static IntPtr MouseHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -229,7 +193,19 @@ namespace Emoki.Platforms.Windows
                     wParam == (IntPtr)WM_RBUTTONDOWN ||
                     wParam == (IntPtr)WM_MBUTTONDOWN)
                 {
-                    ResetBuffer();
+                    // --- MODIFIED EXCEPTION LOGIC ---
+                    // 1. Get the cursor position from the hook lParam
+                    MSLLHOOKSTRUCT mouseStruct = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+                    
+                    // 2. Identify which window is under the cursor
+                    IntPtr clickedWindowHandle = WindowFromPoint(mouseStruct.pt);
+                    
+                    // 3. Only reset the buffer if the clicked window is NOT our popup
+                    // We check the handle itself and its parent (in case a child control was clicked)
+                    if (clickedWindowHandle != PopupHandle && GetParent(clickedWindowHandle) != PopupHandle)
+                    {
+                        ResetBuffer();
+                    }
                 }
             }
 
@@ -237,6 +213,21 @@ namespace Emoki.Platforms.Windows
         }
 
         #region Win32 API
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MSLLHOOKSTRUCT {
+            public System.Drawing.Point pt;
+            public uint mouseData;
+            public uint flags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr WindowFromPoint(System.Drawing.Point point);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetParent(IntPtr hWnd);
+
         [DllImport("user32.dll")]
         private static extern int GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
 
@@ -258,16 +249,14 @@ namespace Emoki.Platforms.Windows
         }
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr SetWindowsHookEx(int idHook,
-            Delegate lpfn, IntPtr hMod, uint dwThreadId);
+        private static extern IntPtr SetWindowsHookEx(int idHook, Delegate lpfn, IntPtr hMod, uint dwThreadId);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool UnhookWindowsHookEx(IntPtr hhk);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode,
-            IntPtr wParam, IntPtr lParam);
+        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr GetModuleHandle(string lpModuleName);
@@ -280,9 +269,6 @@ namespace Emoki.Platforms.Windows
 
         [DllImport("user32.dll")]
         private static extern IntPtr GetKeyboardLayout(uint idThread);
-
         #endregion
-
     }
-
 }

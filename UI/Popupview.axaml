@@ -1,35 +1,48 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="clr-namespace:Emoki.UI"
-        mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="150"
         x:Class="Emoki.UI.PopupView"
         Background="Transparent"
-        Title="Emoki Popup"
         SystemDecorations="None"
-        ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="NoChrome"
-        TransparencyLevelHint="Transparent"
-        WindowStartupLocation="Manual">
-    
-    <Design.DataContext>
-        <ui:PopupViewModel />
-    </Design.DataContext>
+        Topmost="True"
+        ShowActivated="False"
+        CanResize="False"
+        SizeToContent="WidthAndHeight"
+        TransparencyLevelHint="Transparent">
 
-    <Border BorderBrush="#303030" BorderThickness="1" CornerRadius="4" Background="White">
-        <StackPanel Margin="8" Orientation="Vertical">
-            <TextBlock Text="Matching Emojis:" FontWeight="Bold" Margin="0,0,0,5"/>
-            <ItemsControl ItemsSource="{Binding Results}">
-                <ItemsControl.ItemTemplate>
+    <Window.Styles>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#F0F0F0"/> </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="#E0E0E0"/> </Style>
+    </Window.Styles>
+
+    <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="6" 
+            Background="White" BoxShadow="0 4 10 0 #40000000">
+        <StackPanel Margin="4" Orientation="Vertical">
+            <TextBlock Text="Suggestions" FontSize="10" Foreground="Gray" 
+                       Margin="8,4,0,4" FontWeight="SemiBold"/>
+            
+            <ListBox ItemsSource="{Binding Results}" 
+                     Background="Transparent"
+                     BorderThickness="0"
+                     SelectionMode="Single"
+                     Name="EmojiList">
+                <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="ui:PopupResult">
-                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,2">
-                            <TextBlock Text="{Binding Emoji}" FontSize="16" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding Shortcut}" Foreground="Gray" VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <TextBlock Text="{Binding Emoji}" FontSize="20" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Shortcut}" FontSize="13" 
+                                       Foreground="#505050" VerticalAlignment="Center"/>
                         </StackPanel>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </StackPanel>
     </Border>
 </Window>
