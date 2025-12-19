@@ -7,38 +7,45 @@ namespace Emoki.Core
     public static class EmojiSearch
     {
         /// <summary>
-        /// Searches the emoji map for shortcuts.
-        /// Matches are allowed to cross word boundaries (e.g., "gift_" matches "gift_heart").
-        /// Results are still ranked by which word index the match begins at.
+        /// Search implementation used by the UI.
+        /// - `emojiMap`: map of stored shortcuts to emoji (keys usually include ':' markers).
+        /// - `query`: the sanitized user token (including a leading ':').
+        /// Returns up to 8 matches ordered by word-index (where the match starts) then by shortcut length.
         /// </summary>
         public static List<KeyValuePair<string, string>> Search(Dictionary<string, string> emojiMap, string query)
         {
-            if (string.IsNullOrWhiteSpace(query)) 
+            // Guard: empty query -> no results
+            if (string.IsNullOrWhiteSpace(query))
                 return new List<KeyValuePair<string, string>>();
 
-            // 1. Clean the query: Remove the leading colon and convert to lowercase
+            // Normalize query: trim and drop the leading ':' if present so we search raw tokens
             string searchTerm = query.Trim().ToLowerInvariant();
             if (searchTerm.StartsWith(":"))
             {
                 searchTerm = searchTerm.Substring(1);
             }
 
-            if (string.IsNullOrEmpty(searchTerm)) 
+            if (string.IsNullOrEmpty(searchTerm))
                 return new List<KeyValuePair<string, string>>();
 
-            // 2. Filter and Rank
+            // For each stored shortcut key compute a match score (word index) and keep matches
             var results = emojiMap
-                .Select(kvp => {
-                    // Normalize the shortcut key by removing colons
+                .Select(kvp =>
+                {
+                    // cleanedKey: shortcut normalized to a simple token (no surrounding colons)
                     string cleanedKey = kvp.Key.Trim(':').ToLowerInvariant();
-                    return new { 
-                        Kvp = kvp, 
-                        WordIndex = GetMatchWordIndex(cleanedKey, searchTerm) 
+
+                    return new
+                    {
+                        Kvp = kvp,
+                        WordIndex = GetMatchWordIndex(cleanedKey, searchTerm)
                     };
                 })
-                .Where(x => x.WordIndex != -1) // Keep only matches that start at a word boundary
-                .OrderBy(x => x.WordIndex)     // Priority 1: Match starts in earlier word
-                .ThenBy(x => x.Kvp.Key.Length) // Priority 2: Shorter total shortcut length
+                // only keep entries where the token matches starting at a word boundary
+                .Where(x => x.WordIndex != -1)
+                // prefer matches that begin in earlier words (word index), then shorter shortcuts
+                .OrderBy(x => x.WordIndex)
+                .ThenBy(x => x.Kvp.Key.Length)
                 .Select(x => x.Kvp)
                 .Take(8)
                 .ToList();
@@ -52,17 +59,16 @@ namespace Emoki.Core
         /// </summary>
         private static int GetMatchWordIndex(string shortcut, string searchTerm)
         {
-            // Look for the search term in the string
+            // Find the first occurrence of the search term
             int index = shortcut.IndexOf(searchTerm);
 
-            // We iterate through all occurrences to find one that starts at a word boundary
+            // Check all occurrences until we find one that starts at a word boundary
             while (index != -1)
             {
-                // A valid "Word Start" match is at index 0 
-                // OR follows a delimiter like '_' or '-'
+                // Valid start if at beginning or preceded by '_' / '-'
                 if (index == 0 || shortcut[index - 1] == '_' || shortcut[index - 1] == '-')
                 {
-                    // Calculate the word index by counting delimiters before this position
+                    // Compute the word index by counting delimiters before `index`
                     int wordCount = 0;
                     for (int i = 0; i < index; i++)
                     {
@@ -74,7 +80,7 @@ namespace Emoki.Core
                     return wordCount;
                 }
 
-                // If this occurrence wasn't at a boundary, look for the next one
+                // Try next occurrence
                 index = shortcut.IndexOf(searchTerm, index + 1);
             }
 

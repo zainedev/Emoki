@@ -1,33 +1,45 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Controls.Primitives;
-using Avalonia.VisualTree;
-using Emoki.UI;
+using Avalonia.Threading;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Avalonia.Platform;
-using Avalonia.Threading;
 
 namespace Emoki.UI
 {
+    // Lightweight result record exposed to the view model and UI
     public record PopupResult(string Shortcut, string Emoji);
-    
+
+    // PopupService: manages creation, positioning and visibility of the suggestion popup.
     public class PopupService
     {
+        // Backing window instance for suggestions (kept hidden until needed)
         private PopupView? _popupWindow;
+
+        // Event invoked when a suggestion is explicitly selected (mouse click)
         public static Action<PopupResult>? OnEmojiSelected;
-        
+
+        // Public accessor returning the current hovered/selected item, if any.
+        // Reads directly from the view model to avoid depending on a Window method.
+        public PopupResult? GetActiveSelection()
+        {
+            if (_popupWindow?.DataContext is PopupViewModel vm)
+                return vm.SelectedResult;
+            return null;
+        }
+
+        // Create the hidden popup window and capture its platform handle for hook logic.
+        // This is called after Avalonia platform initialization to avoid early-window errors.
         public void InitializeWindowHandle()
         {
             if (_popupWindow == null)
             {
                 _popupWindow = new PopupView();
                 _popupWindow.CanResize = false;
-                _popupWindow.SizeToContent = Avalonia.Controls.SizeToContent.WidthAndHeight;
-                _popupWindow.IsVisible = false; 
+                _popupWindow.SizeToContent = SizeToContent.WidthAndHeight;
+                _popupWindow.IsVisible = false;
 
+                // Temporarily show to ensure a platform handle is created
                 _popupWindow.Show();
 
                 var platformHandle = _popupWindow.TryGetPlatformHandle();
@@ -36,6 +48,7 @@ namespace Emoki.UI
                     Emoki.Platforms.Windows.KeyboardHook.PopupHandle = platformHandle.Handle;
                 }
 
+                // Hide again on the UI thread to keep the window invisible until needed
                 Dispatcher.UIThread.Post(() =>
                 {
                     if (_popupWindow != null)
@@ -44,6 +57,7 @@ namespace Emoki.UI
             }
         }
 
+        // Show the popup with `searchResults` (shortcut -> emoji). Ensures ViewModel updates.
         public void ShowPopup(List<KeyValuePair<string, string>> searchResults)
         {
             if (searchResults == null || !searchResults.Any())
@@ -52,24 +66,24 @@ namespace Emoki.UI
                 return;
             }
 
-            var screenPosition = GetCurrentCursorPosition();
-            
-            if (_popupWindow == null)
-            {
-                InitializeWindowHandle();
-            }
-            
-            var viewModel = (PopupViewModel)_popupWindow!.DataContext!; 
+            if (_popupWindow == null) InitializeWindowHandle();
+
+            // Defensive: ensure DataContext is the expected view model before casting
+            if (!(_popupWindow!.DataContext is PopupViewModel viewModel))
+                return;
+
             viewModel.UpdateResults(searchResults.Select(kvp => new PopupResult(kvp.Key, kvp.Value)).ToList());
-            
+
+            var screenPosition = GetCurrentCursorPosition();
             _popupWindow.Position = new PixelPoint((int)screenPosition.X, (int)screenPosition.Y);
-            
+
             if (!_popupWindow.IsVisible)
             {
                 _popupWindow.Show();
             }
         }
 
+        // Hide the popup if present
         public void HidePopup()
         {
             if (_popupWindow != null)
@@ -77,11 +91,12 @@ namespace Emoki.UI
                 _popupWindow.IsVisible = false;
             }
         }
-        
+
+        // Placeholder: compute appropriate cursor-based placement for the popup.
+        // Currently returns a fixed point; replace with real cursor query when available.
         private PixelPoint GetCurrentCursorPosition()
         {
-            // Placeholder: Replace with real Win32 cursor logic if needed
-            return new PixelPoint(1000, 500); 
+            return new PixelPoint(1000, 500);
         }
     }
 }

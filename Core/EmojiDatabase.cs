@@ -14,8 +14,10 @@ namespace Emoki.Core
 
     public class EmojiDatabase
     {
-        private Dictionary<string, string> _emojisMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); 
-        
+        // Internal map of normalized shortcut -> emoji. Case-insensitive comparer used.
+        private Dictionary<string, string> _emojisMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        // Relative path (from AppDomain.BaseDirectory) to the JSON data file
         private const string EmojiDataFilePath = "Data/emojis.json";
 
         public EmojiDatabase()
@@ -48,10 +50,10 @@ namespace Emoki.Core
                     .SelectMany(e => e.Shortcuts!
                         .Select(s => 
                         {
-                            // Standardize to :shortcut: format
+                            // Standardize stored keys to a canonical ":shortcut:" lowercase form
                             string cleanedShortcut = s.Trim().Trim(':').ToLowerInvariant();
-                            string key = $":{cleanedShortcut}:"; 
-                            
+                            string key = $":{cleanedShortcut}:";
+
                             return new { Shortcut = key, Emoji = e.Emoji! };
                         }))
                     .ToList();
@@ -82,6 +84,7 @@ namespace Emoki.Core
             }
         }
 
+        // Expose the internal emoji map. Caller should treat result as read-only.
         public Dictionary<string, string> GetAll()
         {
             return _emojisMap;

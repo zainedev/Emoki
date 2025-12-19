@@ -29,5 +29,11 @@ namespace Emoki.UI
 
             DataContext = new PopupViewModel();
         }
+
+        // Returns the currently highlighted result from the view model (if any)
+        public PopupResult? GetCurrentSelection()
+        {
+            return (DataContext as PopupViewModel)?.SelectedResult;
+        }
     }
 }

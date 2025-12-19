@@ -10,13 +10,22 @@ using Emoki.Platforms.Windows;
 
 namespace Emoki
 {
+    // Application bootstrap and coordination
     class Program
     {
+        // Emoji lookup table loaded from the database: shortcut -> emoji
         public static Dictionary<string, string> EmojiShortcutMap { get; private set; } = new Dictionary<string, string>();
-        private static PopupService _popupService = new PopupService(); 
-        private static KeyValuePair<string, string>? _activeMatch = null; 
-        private static string _currentRawBuffer = string.Empty; 
 
+        // Manages the popup window lifecycle and interactions
+        private static PopupService _popupService = new PopupService();
+
+        // Currently selected suggestion (first result). Null when no selection.
+        private static KeyValuePair<string, string>? _activeMatch = null;
+
+        // Latest raw character buffer snapshot reported by the keyboard hook
+        private static string _currentRawBuffer = string.Empty;
+
+        // Program entry: set up handlers, load DB, start keyboard hook and UI lifecycle.
         [STAThread]
         public static void Main(string[] args)
         {
@@ -57,6 +66,9 @@ namespace Emoki
             }
         }
 
+        // PerformInjection: erases the typed shortcut and injects the selected emoji.
+        // - `emojiToInject`: the emoji character/string to insert
+        // - `bufferSnapshot`: snapshot of the hook buffer used to compute erase length
         private static void PerformInjection(string emojiToInject, string bufferSnapshot)
         {
             // 1. Calculate length immediately from the snapshot
@@ -85,6 +97,8 @@ namespace Emoki
             });
         }
 
+        // HandleEnterKeySuppression: called by the hook when Enter is pressed.
+        // Returns true to suppress the physical Enter key, false to allow it.
         private static bool HandleEnterKeySuppression()
         {
             if (_activeMatch.HasValue)
@@ -95,6 +109,8 @@ namespace Emoki
             return false;
         }
 
+        // GetShortcutLength: returns number of characters (including colon)
+        // from the last colon to buffer end. Used for backspace count.
         private static int GetShortcutLength(string buffer)
         {
             if (string.IsNullOrEmpty(buffer)) return 0;
@@ -103,6 +119,8 @@ namespace Emoki
             return buffer.Length - lastColonIndex;
         }
 
+        // HandleBufferChanged: runs on UI dispatcher to sanitize token,
+        // call search, update `_activeMatch`, and show/hide popup accordingly.
         private static void HandleBufferChanged(string buffer)
         {
             _currentRawBuffer = buffer; 
@@ -153,8 +171,11 @@ namespace Emoki
             });
         }
 
+        // InitializePopupService: helper invoked by Avalonia `App` after platform
+        // initialization to create the (hidden) popup window handle.
         public static void InitializePopupService() => _popupService.InitializeWindowHandle();
 
+        // BuildAvaloniaApp: avalonia app builder used to start the UI lifetime.
         public static AppBuilder BuildAvaloniaApp()
             => AppBuilder.Configure<App>()
                 .UsePlatformDetect()

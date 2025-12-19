@@ -6,29 +6,33 @@ using System;
 
 namespace Emoki
 {
+    // Application-level lifecycle hooks and small helpers
     public partial class App : Application
     {
+        // Load XAML resources and App-level styles
         public override void Initialize()
         {
             AvaloniaXamlLoader.Load(this);
         }
 
+        // Called when the Avalonia framework is ready. This is executed on the UI thread.
+        // We set a conservative ShutdownMode and initialize UI services that require the
+        // platform (like creating a hidden popup window for the tray icon).
         public override void OnFrameworkInitializationCompleted()
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                // CRITICAL FIX 1: Set the application to only close when we explicitly call Shutdown().
-                // This prevents the app from quitting when the last "window" (TrayIcon menu) closes.
-                desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown; 
+                // Prevent automatic shutdown when windows close; we control shutdown explicitly.
+                desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
                 // Initialize the popup service now that Avalonia's platform is available.
-                // This creates the hidden window handle needed for TrayIcon stability.
                 try
                 {
                     Program.InitializePopupService();
                 }
                 catch (Exception ex)
                 {
+                    // Defensive logging to avoid crashing the app
                     Console.WriteLine($"[PopupService init failed] {ex}");
                 }
             }
@@ -36,7 +40,8 @@ namespace Emoki
             base.OnFrameworkInitializationCompleted();
         }
 
-        // The handler for the TrayIcon's Exit button, defined in App.axaml
+        // Handler wired from App.axaml for the tray menu exit action.
+        // Calls the desktop lifetime Shutdown so the application exits cleanly.
         private void ExitAppMenuItem_Click(object? sender, System.EventArgs e)
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
