@@ -32,7 +32,7 @@
                      SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
                      Background="Transparent"
                      BorderThickness="0"
-                     SelectionMode="Single"
+                     SelectionMode="AlwaysSelected,Single"
                      Name="EmojiList">
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="ui:PopupResult">

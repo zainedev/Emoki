@@ -101,6 +101,8 @@ namespace Emoki.UI
             if (_popupWindow != null)
             {
                 _popupWindow.IsVisible = false;
+                // Clear cached selection so Enter is not suppressed after hiding
+                UpdateCachedSelection(null);
             }
         }
 
