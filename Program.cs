@@ -19,7 +19,7 @@ namespace Emoki
         // Manages the popup window lifecycle and interactions
         private static PopupService _popupService = new PopupService();
 
-        // Currently selected suggestion (first result). Null when no selection.
+        // Previously-used first-match tracking (kept for compatibility; popup selection used instead)
         private static KeyValuePair<string, string>? _activeMatch = null;
 
         // Latest raw character buffer snapshot reported by the keyboard hook
@@ -50,7 +50,7 @@ namespace Emoki
                 };
 
                 // 5. Start Hook Thread
-                System.Threading.Thread hookThread = new System.Threading.Thread(() =>
+                Thread hookThread = new Thread(() =>
                 {
                     KeyboardHook.Start();
                 }) { IsBackground = true };
@@ -82,10 +82,10 @@ namespace Emoki
             });
 
             // 3. Execute injection on background thread to not freeze UI
-            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            ThreadPool.QueueUserWorkItem(_ =>
             {
                 // 4. Wait for the OS to finalize the focus shift (Critical for Mouse Clicks)
-                System.Threading.Thread.Sleep(60); 
+                Thread.Sleep(60); 
 
                 // 5. Erase and Inject
                 TextInjector.Erase(shortcutLengthToErase);
@@ -101,10 +101,11 @@ namespace Emoki
         // Returns true to suppress the physical Enter key, false to allow it.
         private static bool HandleEnterKeySuppression()
         {
-            if (_activeMatch.HasValue)
+            var active = _popupService.GetActiveSelection();
+            if (active != null)
             {
-                PerformInjection(_activeMatch.Value.Value, _currentRawBuffer);
-                return true; 
+                PerformInjection(active.Emoji, _currentRawBuffer);
+                return true;
             }
             return false;
         }
@@ -154,7 +155,6 @@ namespace Emoki
                     
                     if (searchTriggered && results.Count > 0)
                     {
-                        _activeMatch = results.First(); 
                         _popupService.ShowPopup(results);
                     }
                     else

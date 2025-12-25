@@ -19,13 +19,20 @@ namespace Emoki.UI
         // Event invoked when a suggestion is explicitly selected (mouse click)
         public static Action<PopupResult>? OnEmojiSelected;
 
+        // Cached active selection stored on the UI thread and read from other threads.
+        private static PopupResult? _cachedActiveSelection;
+
+        // Update the cached active selection (called from UI thread)
+        public static void UpdateCachedSelection(PopupResult? sel)
+        {
+            _cachedActiveSelection = sel;
+        }
+
         // Public accessor returning the current hovered/selected item, if any.
-        // Reads directly from the view model to avoid depending on a Window method.
+        // Returns a cached copy safe to read from non-UI threads.
         public PopupResult? GetActiveSelection()
         {
-            if (_popupWindow?.DataContext is PopupViewModel vm)
-                return vm.SelectedResult;
-            return null;
+            return _cachedActiveSelection;
         }
 
         // Create the hidden popup window and capture its platform handle for hook logic.
@@ -72,7 +79,12 @@ namespace Emoki.UI
             if (!(_popupWindow!.DataContext is PopupViewModel viewModel))
                 return;
 
-            viewModel.UpdateResults(searchResults.Select(kvp => new PopupResult(kvp.Key, kvp.Value)).ToList());
+            var popupResults = searchResults.Select(kvp => new PopupResult(kvp.Key, kvp.Value)).ToList();
+            viewModel.UpdateResults(popupResults);
+
+            // Set cached active selection to the first result by default
+            if (popupResults.Count > 0)
+                UpdateCachedSelection(popupResults[0]);
 
             var screenPosition = GetCurrentCursorPosition();
             _popupWindow.Position = new PixelPoint((int)screenPosition.X, (int)screenPosition.Y);

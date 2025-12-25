@@ -17,7 +17,7 @@
             <Setter Property="Background" Value="Transparent"/>
         </Style>
         <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#F0F0F0"/> </Style>
+            <Setter Property="Background" Value="Transparent"/> </Style>
         <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
             <Setter Property="Background" Value="#E0E0E0"/> </Style>
     </Window.Styles>
@@ -28,14 +28,15 @@
             <TextBlock Text="Suggestions" FontSize="10" Foreground="Gray" 
                        Margin="8,4,0,4" FontWeight="SemiBold"/>
             
-            <ListBox ItemsSource="{Binding Results}" 
+            <ListBox ItemsSource="{Binding Results}"
+                     SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
                      Background="Transparent"
                      BorderThickness="0"
                      SelectionMode="Single"
                      Name="EmojiList">
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="ui:PopupResult">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
+                        <StackPanel Orientation="Horizontal" Spacing="12" Background="Transparent" PointerMoved="OnItemPointerEnter" PointerPressed="OnItemPointerPressed">
                             <TextBlock Text="{Binding Emoji}" FontSize="20" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding Shortcut}" FontSize="13" 
                                        Foreground="#505050" VerticalAlignment="Center"/>
