@@ -19,9 +19,6 @@ namespace Emoki
         // Manages the popup window lifecycle and interactions
         private static PopupService _popupService = new PopupService();
 
-        // Previously-used first-match tracking (kept for compatibility; popup selection used instead)
-        private static KeyValuePair<string, string>? _activeMatch = null;
-
         // Latest raw character buffer snapshot reported by the keyboard hook
         private static string _currentRawBuffer = string.Empty;
 
@@ -92,7 +89,6 @@ namespace Emoki
                 TextInjector.InjectText(emojiToInject);
                 
                 // 6. Final cleanup
-                _activeMatch = null;
                 KeyboardHook.ClearBuffer(); 
             });
         }
@@ -121,7 +117,7 @@ namespace Emoki
         }
 
         // HandleBufferChanged: runs on UI dispatcher to sanitize token,
-        // call search, update `_activeMatch`, and show/hide popup accordingly.
+        // call search, and show/hide popup accordingly.
         private static void HandleBufferChanged(string buffer)
         {
             _currentRawBuffer = buffer; 
@@ -159,7 +155,6 @@ namespace Emoki
                     }
                     else
                     {
-                        _activeMatch = null;
                         _popupService.HidePopup();
                     }
                 }
