@@ -110,7 +110,7 @@ namespace Emoki.UI
         // Currently returns a fixed point; replace with real cursor query when available.
         private PixelPoint GetCurrentCursorPosition()
         {
-            return new PixelPoint(1000, 500);
+            return new PixelPoint(1100, 450);
         }
     }
 }

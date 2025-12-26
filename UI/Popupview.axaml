@@ -6,40 +6,61 @@
         SystemDecorations="None"
         Topmost="True"
         ShowActivated="False"
+        Focusable="False"
+        ShowInTaskbar="False"
         CanResize="False"
         SizeToContent="WidthAndHeight"
         TransparencyLevelHint="Transparent">
 
     <Window.Styles>
         <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Padding" Value="0"/>
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Background" Value="Transparent"/>
         </Style>
         <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/> </Style>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
         <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="#E0E0E0"/> </Style>
+            <Setter Property="Background" Value="#E0E0E0"/>
+        </Style>
     </Window.Styles>
 
-    <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="6" 
-            Background="White" BoxShadow="0 4 10 0 #40000000">
-        <StackPanel Margin="4" Orientation="Vertical">
-            <TextBlock Text="Suggestions" FontSize="10" Foreground="Gray" 
-                       Margin="8,4,0,4" FontWeight="SemiBold"/>
+    <Border BorderBrush="#D0D0D0"
+            BorderThickness="1"
+            CornerRadius="6" 
+            Background="White"
+            BoxShadow="0 4 10 0 #40000000">
+        <StackPanel Margin="4"
+                    Orientation="Vertical">
+            <TextBlock Text="Suggestions"
+                       FontSize="10"
+                       Foreground="Gray" 
+                       Margin="8,4,0,4"
+                       FontWeight="SemiBold"/>
             
             <ListBox ItemsSource="{Binding Results}"
                      SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
+                     Focusable="False"
                      Background="Transparent"
                      BorderThickness="0"
                      SelectionMode="AlwaysSelected,Single"
                      Name="EmojiList">
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="ui:PopupResult">
-                        <StackPanel Orientation="Horizontal" Spacing="12" Background="Transparent" PointerMoved="OnItemPointerEnter" PointerPressed="OnItemPointerPressed">
-                            <TextBlock Text="{Binding Emoji}" FontSize="20" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding Shortcut}" FontSize="13" 
-                                       Foreground="#505050" VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="12"
+                                    Background="Transparent"
+                                    PointerMoved="OnItemPointerEnter"
+                                    PointerPressed="OnItemPointerPressed">
+                            <TextBlock Text="{Binding Emoji}"
+                                       FontSize="20"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Shortcut}"
+                                       FontSize="13" 
+                                       Foreground="#505050"
+                                       VerticalAlignment="Center"/>
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
