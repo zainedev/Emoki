@@ -6,7 +6,6 @@
         SystemDecorations="None"
         Topmost="True"
         ShowActivated="False"
-        Focusable="False"
         ShowInTaskbar="False"
         CanResize="False"
         SizeToContent="WidthAndHeight"
@@ -42,26 +41,28 @@
             
             <ListBox ItemsSource="{Binding Results}"
                      SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
-                     Focusable="False"
                      Background="Transparent"
                      BorderThickness="0"
                      SelectionMode="AlwaysSelected,Single"
                      Name="EmojiList">
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="ui:PopupResult">
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="12"
-                                    Background="Transparent"
-                                    PointerMoved="OnItemPointerEnter"
-                                    PointerPressed="OnItemPointerPressed">
-                            <TextBlock Text="{Binding Emoji}"
-                                       FontSize="20"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding Shortcut}"
-                                       FontSize="13" 
-                                       Foreground="#505050"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
+                        <Border Padding="2,4"
+                                CornerRadius="4"
+                                Background="Transparent"
+                                PointerMoved="OnItemPointerEnter"
+                                PointerPressed="OnItemPointerPressed">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="12">
+                                <TextBlock Text="{Binding Emoji}"
+                                        FontSize="20"
+                                        VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Shortcut}"
+                                        FontSize="13" 
+                                        Foreground="#505050"
+                                        VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
