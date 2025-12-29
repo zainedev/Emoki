@@ -606,7 +606,9 @@
     "emoji": "🤒",
     "shortcuts": [
       "thermometer_face",
-      "face_with_thermometer"
+      "face_with_thermometer",
+      "sick_face",
+      "fever"
     ]
   },
   {
@@ -3753,7 +3755,8 @@
   {
     "emoji": "🍀",
     "shortcuts": [
-      "four_leaf_clover"
+      "four_leaf_clover",
+      "lucky"
     ]
   },
   {
@@ -4420,7 +4423,7 @@
     "emoji": "🥖",
     "shortcuts": [
       "french_bread",
-      "baguette_bread"
+      "baguette"
     ]
   },
   {
@@ -7883,7 +7886,8 @@
   {
     "emoji": "❤️",
     "shortcuts": [
-      "heart"
+      "heart",
+      "love"
     ]
   },
   {

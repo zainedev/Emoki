@@ -23,6 +23,8 @@ namespace Emoki.Platforms.Windows
         private const int VK_BACK = 0x08; // Backspace
         private const int VK_RETURN = 0x0D; // Enter
         private const int VK_TAB = 0x09; // Tab
+        private const int VK_UP = 0x26; // Up arrow
+        private const int VK_DOWN = 0x28; // Down arrow
 
         // --- Mouse Constants ---
         // Low-level mouse hook id
@@ -55,6 +57,9 @@ namespace Emoki.Platforms.Windows
         // --- Popup interaction helpers ---
         // If set, invoked on Enter; return true to suppress the Enter key
         public static Func<bool>? OnEnterPressed;
+        // If set, invoked on Up/Down; return true to suppress the key
+        public static Func<bool>? OnUpPressed;
+        public static Func<bool>? OnDownPressed;
         // Cached current buffer length for quick checks from UI
         public static int CurrentBufferLength { get; private set; } = 0;
 
@@ -141,6 +146,38 @@ namespace Emoki.Platforms.Windows
                     catch (Exception ex)
                     {
                         Console.WriteLine($"[KeyboardHook] OnEnterPressed threw: {ex}");
+                    }
+                }
+
+                // Up arrow: allow UI to move selection and optionally suppress
+                if (vkCode == VK_UP)
+                {
+                    try
+                    {
+                        if (OnUpPressed != null && OnUpPressed.Invoke())
+                        {
+                            return (IntPtr)1;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[KeyboardHook] OnUpPressed threw: {ex}");
+                    }
+                }
+
+                // Down arrow: allow UI to move selection and optionally suppress
+                if (vkCode == VK_DOWN)
+                {
+                    try
+                    {
+                        if (OnDownPressed != null && OnDownPressed.Invoke())
+                        {
+                            return (IntPtr)1;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[KeyboardHook] OnDownPressed threw: {ex}");
                     }
                 }
 

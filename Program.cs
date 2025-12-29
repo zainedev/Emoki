@@ -39,6 +39,8 @@ namespace Emoki
                 // 3. Hooks
                 KeyboardHook.OnBufferChanged += HandleBufferChanged;
                 KeyboardHook.OnEnterPressed = HandleEnterKeySuppression;
+                KeyboardHook.OnUpPressed = HandleUpKeySuppression;
+                KeyboardHook.OnDownPressed = HandleDownKeySuppression;
 
                 // 4. Mouse Click Injection
                 PopupService.OnEmojiSelected = (result) => 
@@ -101,6 +103,32 @@ namespace Emoki
             if (active != null)
             {
                 PerformInjection(active.Emoji, _currentRawBuffer);
+                return true;
+            }
+            return false;
+        }
+
+        // HandleUpKeySuppression: called by the hook when Up is pressed.
+        // Returns true to suppress the physical Up key when popup is active.
+        private static bool HandleUpKeySuppression()
+        {
+            var active = _popupService.GetActiveSelection();
+            if (active != null)
+            {
+                Dispatcher.UIThread.Invoke(() => _popupService.MoveSelectionUp());
+                return true;
+            }
+            return false;
+        }
+
+        // HandleDownKeySuppression: called by the hook when Down is pressed.
+        // Returns true to suppress the physical Down key when popup is active.
+        private static bool HandleDownKeySuppression()
+        {
+            var active = _popupService.GetActiveSelection();
+            if (active != null)
+            {
+                Dispatcher.UIThread.Invoke(() => _popupService.MoveSelectionDown());
                 return true;
             }
             return false;

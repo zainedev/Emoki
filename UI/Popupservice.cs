@@ -106,6 +106,32 @@ namespace Emoki.UI
             }
         }
 
+        // Move the view-model selection up one item (UI thread)
+        public void MoveSelectionUp()
+        {
+            if (_popupWindow == null) return;
+            if (!(_popupWindow.DataContext is PopupViewModel vm)) return;
+            if (vm.Results == null || vm.Results.Count == 0) return;
+
+            if (vm.SelectedIndex > 0)
+                vm.SelectedIndex -= 1;
+
+            UpdateCachedSelection(vm.SelectedResult);
+        }
+
+        // Move the view-model selection down one item (UI thread)
+        public void MoveSelectionDown()
+        {
+            if (_popupWindow == null) return;
+            if (!(_popupWindow.DataContext is PopupViewModel vm)) return;
+            if (vm.Results == null || vm.Results.Count == 0) return;
+
+            if (vm.SelectedIndex < vm.Results.Count - 1)
+                vm.SelectedIndex += 1;
+
+            UpdateCachedSelection(vm.SelectedResult);
+        }
+
         // Placeholder: compute appropriate cursor-based placement for the popup.
         // Currently returns a fixed point; replace with real cursor query when available.
         private PixelPoint GetCurrentCursorPosition()
